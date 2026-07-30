@@ -1,0 +1,586 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Fluxograma Interativo - Jornada do Cliente</title>
+<style>
+:root{--bg:#f7f8fa;--panel:#fff;--text:#1a1a1a;--muted:#667085;--line:#222428}
+*{box-sizing:border-box}html,body{height:100%;margin:0}body{font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:var(--text);overflow:hidden}
+header{height:70px;background:#fff;border-bottom:1px solid #dfe3e8;display:flex;align-items:center;justify-content:space-between;gap:14px;padding:10px 14px;position:relative;z-index:5}
+.headline{min-width:0}.headline h1{font-size:16px;margin:0 0 4px}.headline p{font-size:12px;color:var(--muted);margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.controls{display:flex;gap:6px;align-items:center;flex-wrap:nowrap}button{font:600 12px Arial;border:1px solid #cfd5dc;background:#fff;border-radius:6px;padding:7px 9px;color:#344054;cursor:pointer;white-space:nowrap}button:hover{background:#f4f6f8}.primary{background:#123453;color:#fff;border-color:#123453}.primary:hover{background:#0e2942}
+#viewport{position:absolute;inset:70px 0 0;overflow:auto;background:#fff;overscroll-behavior:contain}
+#stage{position:relative;margin:0;transform-origin:0 0}
+#canvas{position:absolute;left:0;top:0;transform-origin:0 0}
+svg{position:absolute;inset:0;overflow:visible}
+.edge{fill:none;stroke:var(--line);stroke-width:1.15;stroke-linejoin:round;stroke-linecap:round;marker-end:url(#arrow);shape-rendering:geometricPrecision}.edge.shared{marker-end:none}.edge.return{stroke:var(--line);stroke-dasharray:none}.edge.hidden{display:none}
+.edge-label{font-size:9px;font-weight:700;fill:#222428;text-anchor:middle;dominant-baseline:middle}.edge-label-bg{fill:#fff;stroke:#fff;stroke-width:3px}
+.node{position:absolute;border:1.35px solid var(--border);background:var(--fill);color:#1a1a1a;border-radius:4px;padding:5px 21px 5px 7px;font-size:10px;line-height:1.12;font-weight:600;text-align:center;display:flex;align-items:center;justify-content:center;cursor:pointer;user-select:none;box-shadow:0 1px 2px rgba(16,24,40,.08);overflow:hidden;white-space:normal}
+.node:hover{box-shadow:0 0 0 2px rgba(18,52,83,.12)}.node.hidden{display:none}.node.expanded{box-shadow:0 0 0 2px rgba(18,52,83,.16)}
+.node .label{display:block;max-width:100%;max-height:100%;white-space:normal;overflow-wrap:normal;word-break:normal;hyphens:none;text-wrap:pretty}.node .mark{position:absolute;right:4px;top:50%;transform:translateY(-50%);width:15px;height:15px;display:flex;align-items:center;justify-content:center;border-radius:50%;background:rgba(255,255,255,.72);font-size:10px;line-height:1;font-weight:900;color:var(--border)}.node.terminal .mark{display:none}
+.node.source{transform:skew(-7deg)}.node.source span.label{transform:skew(7deg)}.node.decision{border-radius:0;clip-path:polygon(50% 0,100% 50%,50% 100%,0 50%);padding:9px 24px}.node.decision .mark{right:10px;width:13px;height:13px;font-size:9px}.node.terminal{border-radius:999px;padding-left:9px;padding-right:9px}.node.branch{border-radius:4px;font-weight:700}
+.legend{position:sticky;left:12px;top:10px;z-index:4;width:140px;background:rgba(255,255,255,.96);border:1px solid #dfe3e8;border-radius:7px;padding:8px;font-size:10px;box-shadow:0 2px 7px rgba(16,24,40,.08);margin:10px}.legend strong{font-size:12px;display:block;margin-bottom:7px}.leg{display:flex;align-items:center;gap:6px;margin:5px 0}.sw{width:18px;height:10px;border-radius:2px;border:1px solid rgba(0,0,0,.18)}
+.tip{position:fixed;left:50%;bottom:12px;transform:translateX(-50%);z-index:6;background:rgba(18,52,83,.92);color:#fff;border-radius:999px;padding:7px 12px;font-size:11px;pointer-events:none}
+@media(max-width:760px){header{height:104px;align-items:flex-start;flex-direction:column;padding:9px 10px}.controls{width:100%;overflow-x:auto;padding-bottom:3px}.headline p{white-space:normal}.controls button{padding:6px 8px}#viewport{inset:104px 0 0}.legend{transform:scale(.9);transform-origin:top left}.tip{font-size:10px;bottom:8px;max-width:90%;text-align:center}}
+</style>
+</head>
+<body>
+<header>
+  <div class="headline"><h1>Jornada do Cliente</h1><p>Mesma estrutura do fluxograma original. Clique em uma caixa para abrir; clique novamente para recolher sua ramificação.</p></div>
+  <div class="controls">
+    <button id="reset" class="primary">Reiniciar</button>
+    <button id="all">Abrir tudo</button>
+    <button id="fit">Visão geral</button>
+    <button id="minus">-</button>
+    <button id="one">100%</button>
+    <button id="plus">+</button>
+  </div>
+</header>
+<div id="viewport">
+  <div class="legend"><strong>Legenda</strong>
+    <div class="leg"><span class="sw" style="background:#ffd8f4;border-color:#af3fb9"></span>Descobrimento</div>
+    <div class="leg"><span class="sw" style="background:#dedaff;border-color:#6631d7"></span>Reconhecimento</div>
+    <div class="leg"><span class="sw" style="background:#c6dcff;border-color:#305bab"></span>Consideração</div>
+    <div class="leg"><span class="sw" style="background:#f8d3af;border-color:#9b4a07"></span>Decisão</div>
+    <div class="leg"><span class="sw" style="background:#ffc6c6;border-color:#bd0909"></span>Pós-venda</div>
+  </div>
+  <div id="stage"><div id="canvas"><svg id="edges"></svg><div id="nodes"></div></div></div>
+</div>
+<div class="tip" id="tip">Clique em uma caixa para abrir; clique novamente para recolher</div>
+<script id="flow-data" type="application/json">{"width":3020,"height":1455,"nodes":[{"id":"start","label":"Início","x":20,"y":625,"phase":"entry","kind":"terminal","w":70,"h":38},{"id":"src_ind","label":"Indicação","x":120,"y":365,"phase":"descobrimento","kind":"source","w":126,"h":38},{"id":"src_evt","label":"Evento de lançamento","x":120,"y":417,"phase":"descobrimento","kind":"source","w":126,"h":38},{"id":"src_placa","label":"Placa no imóvel","x":120,"y":469,"phase":"descobrimento","kind":"source","w":126,"h":38},{"id":"src_conhece","label":"Cliente já conhece","x":120,"y":521,"phase":"descobrimento","kind":"source","w":126,"h":38},{"id":"src_atual","label":"Cliente atual","x":120,"y":573,"phase":"descobrimento","kind":"source","w":126,"h":38},{"id":"src_portal","label":"Portal imobiliário","x":120,"y":625,"phase":"descobrimento","kind":"source","w":126,"h":38},{"id":"src_google","label":"Google","x":120,"y":677,"phase":"descobrimento","kind":"source","w":126,"h":38},{"id":"src_site","label":"Site","x":120,"y":729,"phase":"descobrimento","kind":"source","w":126,"h":38},{"id":"src_redes","label":"Redes sociais","x":120,"y":781,"phase":"descobrimento","kind":"source","w":126,"h":38},{"id":"src_pago","label":"Anúncio pago","x":120,"y":833,"phase":"descobrimento","kind":"source","w":126,"h":38},{"id":"src_prop","label":"Proprietário busca anunciar","x":120,"y":885,"phase":"descobrimento","kind":"source","w":126,"h":38},{"id":"contato","label":"Recebimento do contato","x":310,"y":625,"phase":"reconhecimento","kind":"process","w":135,"h":44},{"id":"cliente","label":"Já é cliente?","x":485,"y":625,"phase":"entry","kind":"decision","w":92,"h":64},{"id":"historico","label":"Consultar histórico","x":625,"y":565,"phase":"reconhecimento","kind":"process","w":120,"h":44},{"id":"cadastro","label":"Cadastro inicial","x":625,"y":685,"phase":"reconhecimento","kind":"source","w":115,"h":42},{"id":"triagem","label":"Triagem da necessidade","x":785,"y":625,"phase":"reconhecimento","kind":"process","w":135,"h":44},{"id":"necessidade","label":"Qual a necessidade?","x":955,"y":625,"phase":"entry","kind":"decision","w":105,"h":72},{"id":"b_alugar","label":"Alugar","x":1120,"y":55,"phase":"entry","kind":"branch","w":135,"h":44},{"id":"b_comprar","label":"Comprar","x":1120,"y":185,"phase":"entry","kind":"branch","w":135,"h":44},{"id":"b_lanc","label":"Comprar lançamento","x":1120,"y":385,"phase":"entry","kind":"branch","w":135,"h":44},{"id":"b_vender","label":"Vender seu imóvel","x":1120,"y":600,"phase":"entry","kind":"branch","w":135,"h":44},{"id":"b_locar","label":"Locar seu imóvel","x":1120,"y":770,"phase":"entry","kind":"branch","w":135,"h":44},{"id":"b_fin","label":"Necessidade financeira","x":1120,"y":955,"phase":"entry","kind":"branch","w":135,"h":44},{"id":"b_man","label":"Manutenção","x":1120,"y":1055,"phase":"entry","kind":"branch","w":135,"h":44},{"id":"b_ren","label":"Renovação","x":1120,"y":1155,"phase":"entry","kind":"branch","w":135,"h":44},{"id":"b_res","label":"Rescisão","x":1120,"y":1255,"phase":"entry","kind":"branch","w":135,"h":44},{"id":"b_rec","label":"Reclamação/Dúvida geral","x":1120,"y":1355,"phase":"entry","kind":"branch","w":135,"h":44},{"id":"alu_0","label":"Corretor locação","x":1280,"y":55,"phase":"consideracao","kind":"process","w":112,"h":44},{"id":"alu_1","label":"Perfil locação","x":1408,"y":55,"phase":"consideracao","kind":"process","w":112,"h":44},{"id":"alu_2","label":"Seleção imóveis","x":1536,"y":55,"phase":"consideracao","kind":"process","w":112,"h":44},{"id":"alu_3","label":"Apresentação/Visita","x":1664,"y":55,"phase":"consideracao","kind":"process","w":112,"h":44},{"id":"alu_4","label":"Encontrou adequado?","x":1792,"y":55,"phase":"entry","kind":"decision","w":112,"h":44},{"id":"alu_5","label":"Escolha imóvel","x":1920,"y":55,"phase":"decisao","kind":"process","w":112,"h":44},{"id":"alu_6","label":"Proposta locação","x":2048,"y":55,"phase":"decisao","kind":"process","w":112,"h":44},{"id":"alu_7","label":"Análise cadastral","x":2176,"y":55,"phase":"decisao","kind":"process","w":112,"h":44},{"id":"alu_8","label":"Aprovação proprietário?","x":2304,"y":55,"phase":"entry","kind":"decision","w":112,"h":44},{"id":"alu_9","label":"Contrato locação","x":2432,"y":55,"phase":"decisao","kind":"process","w":112,"h":44},{"id":"alu_10","label":"Assinatura?","x":2560,"y":55,"phase":"entry","kind":"decision","w":112,"h":44},{"id":"alu_11","label":"Vistoria","x":2688,"y":55,"phase":"decisao","kind":"process","w":112,"h":44},{"id":"alu_12","label":"Entrega chaves","x":2816,"y":55,"phase":"decisao","kind":"process","w":112,"h":44},{"id":"alu_13","label":"Boas-vindas","x":2944,"y":55,"phase":"posvenda","kind":"process","w":112,"h":44},{"id":"alu_14","label":"Suporte locação","x":3072,"y":55,"phase":"posvenda","kind":"process","w":112,"h":44},{"id":"alu_15","label":"Atendimento financeiro","x":3200,"y":55,"phase":"posvenda","kind":"process","w":112,"h":44},{"id":"alu_16","label":"Acompanhamento proprietário","x":3328,"y":55,"phase":"posvenda","kind":"process","w":112,"h":44},{"id":"alu_17","label":"Renovação/Rescisão","x":3456,"y":55,"phase":"posvenda","kind":"process","w":112,"h":44},{"id":"alu_18","label":"Satisfação locação","x":3584,"y":55,"phase":"entry","kind":"terminal","w":112,"h":44},{"id":"alu_ajuste","label":"Ajustar busca","x":1664,"y":-20,"phase":"consideracao","kind":"process","w":112,"h":44},{"id":"comp_0","label":"Corretor venda","x":1280,"y":185,"phase":"consideracao","kind":"process","w":112,"h":44},{"id":"comp_1","label":"Perfil compra","x":1422,"y":185,"phase":"consideracao","kind":"process","w":112,"h":44},{"id":"comp_2","label":"Seleção imóveis","x":1564,"y":185,"phase":"consideracao","kind":"process","w":112,"h":44},{"id":"comp_3","label":"Apresentação/Visitas","x":1706,"y":185,"phase":"consideracao","kind":"process","w":112,"h":44},{"id":"comp_4","label":"Imóvel adequado?","x":1848,"y":185,"phase":"entry","kind":"decision","w":112,"h":44},{"id":"comp_5","label":"Proposta compra","x":1990,"y":185,"phase":"decisao","kind":"process","w":112,"h":44},{"id":"comp_6","label":"Negociação","x":2132,"y":185,"phase":"decisao","kind":"process","w":112,"h":44},{"id":"comp_7","label":"Financiamento ok?","x":2274,"y":185,"phase":"entry","kind":"decision","w":112,"h":44},{"id":"comp_8","label":"Contrato compra","x":2416,"y":185,"phase":"decisao","kind":"process","w":112,"h":44},{"id":"comp_9","label":"Assinatura?","x":2558,"y":185,"phase":"entry","kind":"decision","w":112,"h":44},{"id":"comp_10","label":"Escritura","x":2700,"y":185,"phase":"posvenda","kind":"process","w":112,"h":44},{"id":"comp_11","label":"Confirmação entrega","x":2842,"y":185,"phase":"posvenda","kind":"process","w":112,"h":44},{"id":"comp_12","label":"Orientação administrativa","x":2984,"y":185,"phase":"posvenda","kind":"process","w":112,"h":44},{"id":"comp_13","label":"Suporte compra","x":3126,"y":185,"phase":"posvenda","kind":"process","w":112,"h":44},{"id":"comp_14","label":"Indicação","x":3268,"y":185,"phase":"posvenda","kind":"process","w":112,"h":44},{"id":"comp_15","label":"Relacionamento","x":3410,"y":185,"phase":"entry","kind":"terminal","w":112,"h":44},{"id":"comp_ajuste","label":"Ajustar busca","x":1706,"y":260,"phase":"consideracao","kind":"process","w":112,"h":44},{"id":"perfil_prime","label":"Perfil Prime?","x":1280,"y":385,"phase":"entry","kind":"decision","w":95,"h":66},{"id":"prime_0","label":"Corretor Prime","x":1450,"y":315,"phase":"consideracao","kind":"process","w":112,"h":44},{"id":"prime_1","label":"Atendimento personalizado","x":1596,"y":315,"phase":"consideracao","kind":"process","w":112,"h":44},{"id":"prime_2","label":"Perfil investimento","x":1742,"y":315,"phase":"consideracao","kind":"process","w":112,"h":44},{"id":"prime_3","label":"Proposta personalizada","x":1888,"y":315,"phase":"decisao","kind":"process","w":112,"h":44},{"id":"prime_4","label":"Aprovação gerência","x":2034,"y":315,"phase":"decisao","kind":"process","w":112,"h":44},{"id":"prime_5","label":"Análise financeira e jurídica","x":2180,"y":315,"phase":"decisao","kind":"process","w":112,"h":44},{"id":"prime_6","label":"Reserva disponível?","x":2326,"y":315,"phase":"entry","kind":"decision","w":112,"h":44},{"id":"prime_7","label":"Corretor Prime","x":2472,"y":315,"phase":"decisao","kind":"process","w":112,"h":44},{"id":"prime_8","label":"Assinatura","x":2618,"y":315,"phase":"decisao","kind":"process","w":112,"h":44},{"id":"prime_9","label":"Atendimento personalizado","x":2764,"y":315,"phase":"posvenda","kind":"process","w":112,"h":44},{"id":"prime_10","label":"Atualizações prioritárias","x":2910,"y":315,"phase":"posvenda","kind":"process","w":112,"h":44},{"id":"prime_11","label":"Eventos","x":3056,"y":315,"phase":"posvenda","kind":"process","w":112,"h":44},{"id":"prime_12","label":"Entrega personalizada","x":3202,"y":315,"phase":"posvenda","kind":"process","w":112,"h":44},{"id":"prime_13","label":"Novas oportunidades","x":3348,"y":315,"phase":"entry","kind":"terminal","w":112,"h":44},{"id":"lanc_0","label":"Corretor lançamentos","x":1450,"y":455,"phase":"consideracao","kind":"process","w":112,"h":44},{"id":"lanc_1","label":"Apresentação empreendimento","x":1596,"y":455,"phase":"consideracao","kind":"process","w":112,"h":44},{"id":"lanc_2","label":"Plantas e unidades","x":1742,"y":455,"phase":"consideracao","kind":"process","w":112,"h":44},{"id":"lanc_3","label":"Simulação","x":1888,"y":455,"phase":"consideracao","kind":"process","w":112,"h":44},{"id":"lanc_4","label":"Interessou?","x":2034,"y":455,"phase":"entry","kind":"decision","w":112,"h":44},{"id":"lanc_5","label":"Disponível?","x":2180,"y":455,"phase":"entry","kind":"decision","w":112,"h":44},{"id":"lanc_6","label":"Simulação","x":2326,"y":455,"phase":"decisao","kind":"process","w":112,"h":44},{"id":"lanc_7","label":"Reserva e sinal","x":2472,"y":455,"phase":"decisao","kind":"process","w":112,"h":44},{"id":"lanc_8","label":"Análise de Documentos","x":2618,"y":455,"phase":"decisao","kind":"source","w":112,"h":44},{"id":"lanc_9","label":"Contrato lançamento","x":2764,"y":455,"phase":"decisao","kind":"process","w":112,"h":44},{"id":"lanc_10","label":"Atualizações obra","x":2910,"y":455,"phase":"posvenda","kind":"process","w":112,"h":44},{"id":"lanc_11","label":"Informações periódicas","x":3056,"y":455,"phase":"posvenda","kind":"process","w":112,"h":44},{"id":"lanc_12","label":"Acompanhamento financeiro","x":3202,"y":455,"phase":"posvenda","kind":"process","w":112,"h":44},{"id":"lanc_13","label":"Vistoria entrega","x":3348,"y":455,"phase":"posvenda","kind":"process","w":112,"h":44},{"id":"lanc_14","label":"Satisfação lançamento","x":3494,"y":455,"phase":"entry","kind":"terminal","w":112,"h":44},{"id":"lanc_opcoes","label":"Outras opções","x":2028,"y":525,"phase":"consideracao","kind":"process","w":112,"h":44},{"id":"ven_0","label":"Angariador venda","x":1280,"y":600,"phase":"decisao","kind":"process","w":112,"h":44},{"id":"ven_1","label":"Visita imóvel","x":1422,"y":600,"phase":"decisao","kind":"process","w":112,"h":44},{"id":"ven_2","label":"Avaliação comercial","x":1564,"y":600,"phase":"decisao","kind":"process","w":112,"h":44},{"id":"ven_3","label":"Aceita avaliação?","x":1706,"y":600,"phase":"entry","kind":"decision","w":112,"h":44},{"id":"ven_4","label":"Aprovação captação","x":1848,"y":600,"phase":"decisao","kind":"process","w":112,"h":44},{"id":"ven_5","label":"Documentação para contrato de intermediação","x":1990,"y":600,"phase":"decisao","kind":"process","w":112,"h":44},{"id":"ven_6","label":"Cadastro e material","x":2132,"y":600,"phase":"decisao","kind":"process","w":112,"h":44},{"id":"ven_7","label":"Divulgação","x":2274,"y":600,"phase":"decisao","kind":"process","w":112,"h":44},{"id":"ven_8","label":"Visitas e propostas","x":2416,"y":600,"phase":"decisao","kind":"process","w":112,"h":44},{"id":"ven_9","label":"Proposta aceita?","x":2558,"y":600,"phase":"entry","kind":"decision","w":112,"h":44},{"id":"ven_10","label":"Contrato venda","x":2700,"y":600,"phase":"decisao","kind":"process","w":112,"h":44},{"id":"ven_11","label":"Atualização proprietário","x":2842,"y":600,"phase":"posvenda","kind":"process","w":112,"h":44},{"id":"ven_12","label":"Relatório visitas","x":2984,"y":600,"phase":"posvenda","kind":"process","w":112,"h":44},{"id":"ven_13","label":"Retorno propostas","x":3126,"y":600,"phase":"posvenda","kind":"process","w":112,"h":44},{"id":"ven_14","label":"Repasse venda","x":3268,"y":600,"phase":"posvenda","kind":"process","w":112,"h":44},{"id":"ven_15","label":"Satisfação venda","x":3410,"y":600,"phase":"entry","kind":"terminal","w":112,"h":44},{"id":"ven_alinha","label":"Alinhar expectativa","x":1670,"y":525,"phase":"decisao","kind":"process","w":120,"h":44},{"id":"loc_0","label":"Angariador locação","x":1280,"y":770,"phase":"decisao","kind":"process","w":112,"h":44},{"id":"loc_1","label":"Visita e avaliação","x":1422,"y":770,"phase":"decisao","kind":"process","w":112,"h":44},{"id":"loc_2","label":"Apresentação condições","x":1564,"y":770,"phase":"decisao","kind":"process","w":112,"h":44},{"id":"loc_3","label":"Aceita condições?","x":1706,"y":770,"phase":"entry","kind":"decision","w":112,"h":44},{"id":"loc_4","label":"Aprovação captação","x":1848,"y":770,"phase":"decisao","kind":"process","w":112,"h":44},{"id":"loc_5","label":"Documentação e contrato","x":1990,"y":770,"phase":"decisao","kind":"process","w":112,"h":44},{"id":"loc_6","label":"Cadastro e material","x":2132,"y":770,"phase":"decisao","kind":"process","w":112,"h":44},{"id":"loc_7","label":"Divulgação","x":2274,"y":770,"phase":"decisao","kind":"process","w":112,"h":44},{"id":"loc_8","label":"Seleção candidato","x":2416,"y":770,"phase":"decisao","kind":"process","w":112,"h":44},{"id":"loc_9","label":"Candidato ok?","x":2558,"y":770,"phase":"entry","kind":"decision","w":112,"h":44},{"id":"loc_10","label":"Contrato e vistoria","x":2700,"y":770,"phase":"decisao","kind":"process","w":112,"h":44},{"id":"loc_11","label":"Prestação de contas para o proprietário","x":2842,"y":770,"phase":"posvenda","kind":"process","w":112,"h":44},{"id":"loc_12","label":"Repasse mensal","x":2984,"y":770,"phase":"posvenda","kind":"process","w":112,"h":44},{"id":"loc_13","label":"Manutenção imóvel caso necessário","x":3126,"y":770,"phase":"posvenda","kind":"process","w":112,"h":44},{"id":"loc_14","label":"Comunicação em caso de rescisão","x":3268,"y":770,"phase":"posvenda","kind":"process","w":112,"h":44},{"id":"loc_15","label":"Nova divulgação","x":3410,"y":770,"phase":"entry","kind":"terminal","w":112,"h":44},{"id":"loc_alinha","label":"Alinhar condições de locação","x":1665,"y":695,"phase":"decisao","kind":"process","w":135,"h":50},{"id":"resolver","label":"Confirmar resolução","x":2360,"y":1160,"phase":"posvenda","kind":"process","w":125,"h":44},{"id":"crm","label":"Encerramento CRM","x":2530,"y":1160,"phase":"posvenda","kind":"process","w":120,"h":44},{"id":"sat","label":"Satisfação atendida","x":2700,"y":1160,"phase":"entry","kind":"terminal","w":125,"h":44},{"id":"fin_0","label":"Identificação do problema","x":1280,"y":955,"phase":"posvenda","kind":"process","w":112,"h":44},{"id":"fin_1","label":"Análise financeira","x":1430,"y":955,"phase":"posvenda","kind":"process","w":112,"h":44},{"id":"fin_2","label":"Solução financeira","x":1580,"y":955,"phase":"posvenda","kind":"process","w":112,"h":44},{"id":"man_0","label":"Análise manutenção","x":1280,"y":1055,"phase":"apoio","kind":"process","w":112,"h":44},{"id":"man_1","label":"Abertura de chamado","x":1430,"y":1055,"phase":"apoio","kind":"process","w":112,"h":44},{"id":"man_2","label":"Seleção de Terceirizado","x":1580,"y":1055,"phase":"apoio","kind":"process","w":112,"h":44},{"id":"man_3","label":"Execução manutenção","x":1730,"y":1055,"phase":"posvenda","kind":"process","w":112,"h":44},{"id":"ren_0","label":"Alinhamento de expectativa","x":1280,"y":1155,"phase":"apoio","kind":"process","w":112,"h":44},{"id":"ren_1","label":"Consulta das partes","x":1430,"y":1155,"phase":"apoio","kind":"process","w":112,"h":44},{"id":"ren_2","label":"Negociação renovação","x":1580,"y":1155,"phase":"apoio","kind":"process","w":112,"h":44},{"id":"ren_3","label":"Aditivo renovação","x":1730,"y":1155,"phase":"posvenda","kind":"process","w":112,"h":44},{"id":"ren_4","label":"Assinatura renovação","x":1880,"y":1155,"phase":"posvenda","kind":"process","w":112,"h":44},{"id":"res_0","label":"Alinhamento de expectativa","x":1280,"y":1255,"phase":"apoio","kind":"process","w":112,"h":44},{"id":"res_1","label":"Orientação rescisão","x":1430,"y":1255,"phase":"apoio","kind":"process","w":112,"h":44},{"id":"res_2","label":"Cálculo rescisão","x":1580,"y":1255,"phase":"apoio","kind":"process","w":112,"h":44},{"id":"res_3","label":"Vistoria rescisão","x":1730,"y":1255,"phase":"posvenda","kind":"process","w":112,"h":44},{"id":"res_4","label":"Encerramento do contrato","x":1880,"y":1255,"phase":"posvenda","kind":"process","w":112,"h":44},{"id":"rec_0","label":"Entrar em contato com Qualidade e experiência do cliente","x":1280,"y":1355,"phase":"apoio","kind":"process","w":112,"h":44},{"id":"rec_1","label":"Registro reclamação","x":1430,"y":1355,"phase":"apoio","kind":"process","w":112,"h":44},{"id":"rec_2","label":"Encaminhamento","x":1580,"y":1355,"phase":"apoio","kind":"process","w":112,"h":44},{"id":"rec_3","label":"Solução reclamação","x":1730,"y":1355,"phase":"posvenda","kind":"process","w":112,"h":44},{"id":"rec_4","label":"Retorno cliente","x":1880,"y":1355,"phase":"posvenda","kind":"process","w":112,"h":44}],"edges":[{"from":"start","to":"src_ind","label":"","kind":"normal"},{"from":"start","to":"src_evt","label":"","kind":"normal"},{"from":"start","to":"src_placa","label":"","kind":"normal"},{"from":"start","to":"src_conhece","label":"","kind":"normal"},{"from":"start","to":"src_atual","label":"","kind":"normal"},{"from":"start","to":"src_portal","label":"","kind":"normal"},{"from":"start","to":"src_google","label":"","kind":"normal"},{"from":"start","to":"src_site","label":"","kind":"normal"},{"from":"start","to":"src_redes","label":"","kind":"normal"},{"from":"start","to":"src_pago","label":"","kind":"normal"},{"from":"start","to":"src_prop","label":"","kind":"normal"},{"from":"src_ind","to":"contato","label":"","kind":"normal"},{"from":"src_evt","to":"contato","label":"","kind":"normal"},{"from":"src_placa","to":"contato","label":"","kind":"normal"},{"from":"src_conhece","to":"contato","label":"","kind":"normal"},{"from":"src_atual","to":"contato","label":"","kind":"normal"},{"from":"src_portal","to":"contato","label":"","kind":"normal"},{"from":"src_google","to":"contato","label":"","kind":"normal"},{"from":"src_site","to":"contato","label":"","kind":"normal"},{"from":"src_redes","to":"contato","label":"","kind":"normal"},{"from":"src_pago","to":"contato","label":"","kind":"normal"},{"from":"src_prop","to":"contato","label":"","kind":"normal"},{"from":"contato","to":"cliente","label":"","kind":"normal"},{"from":"cliente","to":"historico","label":"SIM","kind":"normal"},{"from":"cliente","to":"cadastro","label":"NÃO","kind":"normal"},{"from":"historico","to":"triagem","label":"","kind":"normal"},{"from":"cadastro","to":"triagem","label":"","kind":"normal"},{"from":"triagem","to":"necessidade","label":"","kind":"normal"},{"from":"necessidade","to":"b_alugar","label":"","kind":"normal"},{"from":"necessidade","to":"b_comprar","label":"","kind":"normal"},{"from":"necessidade","to":"b_lanc","label":"","kind":"normal"},{"from":"necessidade","to":"b_vender","label":"","kind":"normal"},{"from":"necessidade","to":"b_locar","label":"","kind":"normal"},{"from":"necessidade","to":"b_fin","label":"","kind":"normal"},{"from":"necessidade","to":"b_man","label":"","kind":"normal"},{"from":"necessidade","to":"b_ren","label":"","kind":"normal"},{"from":"necessidade","to":"b_res","label":"","kind":"normal"},{"from":"necessidade","to":"b_rec","label":"","kind":"normal"},{"from":"alu_0","to":"alu_1","label":"","kind":"normal"},{"from":"alu_1","to":"alu_2","label":"","kind":"normal"},{"from":"alu_2","to":"alu_3","label":"","kind":"normal"},{"from":"alu_3","to":"alu_4","label":"","kind":"normal"},{"from":"alu_4","to":"alu_5","label":"SIM","kind":"normal"},{"from":"alu_5","to":"alu_6","label":"","kind":"normal"},{"from":"alu_6","to":"alu_7","label":"","kind":"normal"},{"from":"alu_7","to":"alu_8","label":"","kind":"normal"},{"from":"alu_8","to":"alu_9","label":"SIM","kind":"normal"},{"from":"alu_9","to":"alu_10","label":"","kind":"normal"},{"from":"alu_10","to":"alu_11","label":"SIM","kind":"normal"},{"from":"alu_11","to":"alu_12","label":"","kind":"normal"},{"from":"alu_12","to":"alu_13","label":"","kind":"normal"},{"from":"alu_13","to":"alu_14","label":"","kind":"normal"},{"from":"alu_14","to":"alu_15","label":"","kind":"normal"},{"from":"alu_15","to":"alu_16","label":"","kind":"normal"},{"from":"alu_16","to":"alu_17","label":"","kind":"normal"},{"from":"alu_17","to":"alu_18","label":"","kind":"normal"},{"from":"b_alugar","to":"alu_0","label":"","kind":"normal"},{"from":"alu_4","to":"alu_ajuste","label":"NÃO","kind":"return"},{"from":"alu_ajuste","to":"alu_2","label":"","kind":"return"},{"from":"alu_8","to":"alu_6","label":"NÃO","kind":"return"},{"from":"alu_10","to":"alu_9","label":"NÃO","kind":"return"},{"from":"comp_0","to":"comp_1","label":"","kind":"normal"},{"from":"comp_1","to":"comp_2","label":"","kind":"normal"},{"from":"comp_2","to":"comp_3","label":"","kind":"normal"},{"from":"comp_3","to":"comp_4","label":"","kind":"normal"},{"from":"comp_4","to":"comp_5","label":"SIM","kind":"normal"},{"from":"comp_5","to":"comp_6","label":"","kind":"normal"},{"from":"comp_6","to":"comp_7","label":"","kind":"normal"},{"from":"comp_7","to":"comp_8","label":"SIM","kind":"normal"},{"from":"comp_8","to":"comp_9","label":"","kind":"normal"},{"from":"comp_9","to":"comp_10","label":"SIM","kind":"normal"},{"from":"comp_10","to":"comp_11","label":"","kind":"normal"},{"from":"comp_11","to":"comp_12","label":"","kind":"normal"},{"from":"comp_12","to":"comp_13","label":"","kind":"normal"},{"from":"comp_13","to":"comp_14","label":"","kind":"normal"},{"from":"comp_14","to":"comp_15","label":"","kind":"normal"},{"from":"b_comprar","to":"comp_0","label":"","kind":"normal"},{"from":"comp_4","to":"comp_ajuste","label":"NÃO","kind":"return"},{"from":"comp_ajuste","to":"comp_2","label":"","kind":"return"},{"from":"comp_7","to":"comp_6","label":"NÃO","kind":"return"},{"from":"comp_9","to":"comp_8","label":"NÃO","kind":"return"},{"from":"b_lanc","to":"perfil_prime","label":"","kind":"normal"},{"from":"prime_0","to":"prime_1","label":"","kind":"normal"},{"from":"prime_1","to":"prime_2","label":"","kind":"normal"},{"from":"prime_2","to":"prime_3","label":"","kind":"normal"},{"from":"prime_3","to":"prime_4","label":"","kind":"normal"},{"from":"prime_4","to":"prime_5","label":"","kind":"normal"},{"from":"prime_5","to":"prime_6","label":"","kind":"normal"},{"from":"prime_6","to":"prime_7","label":"SIM","kind":"normal"},{"from":"prime_7","to":"prime_8","label":"","kind":"normal"},{"from":"prime_8","to":"prime_9","label":"SIM","kind":"normal"},{"from":"prime_9","to":"prime_10","label":"","kind":"normal"},{"from":"prime_10","to":"prime_11","label":"","kind":"normal"},{"from":"prime_11","to":"prime_12","label":"","kind":"normal"},{"from":"prime_12","to":"prime_13","label":"","kind":"normal"},{"from":"perfil_prime","to":"prime_0","label":"SIM","kind":"normal"},{"from":"prime_6","to":"prime_5","label":"NÃO","kind":"return"},{"from":"prime_8","to":"prime_7","label":"NÃO","kind":"return"},{"from":"lanc_0","to":"lanc_1","label":"","kind":"normal"},{"from":"lanc_1","to":"lanc_2","label":"","kind":"normal"},{"from":"lanc_2","to":"lanc_3","label":"","kind":"normal"},{"from":"lanc_3","to":"lanc_4","label":"","kind":"normal"},{"from":"lanc_4","to":"lanc_5","label":"SIM","kind":"normal"},{"from":"lanc_5","to":"lanc_6","label":"SIM","kind":"normal"},{"from":"lanc_6","to":"lanc_7","label":"","kind":"normal"},{"from":"lanc_7","to":"lanc_8","label":"","kind":"normal"},{"from":"lanc_8","to":"lanc_9","label":"","kind":"normal"},{"from":"lanc_9","to":"lanc_10","label":"","kind":"normal"},{"from":"lanc_10","to":"lanc_11","label":"","kind":"normal"},{"from":"lanc_11","to":"lanc_12","label":"","kind":"normal"},{"from":"lanc_12","to":"lanc_13","label":"","kind":"normal"},{"from":"lanc_13","to":"lanc_14","label":"","kind":"normal"},{"from":"perfil_prime","to":"lanc_0","label":"NÃO","kind":"normal"},{"from":"lanc_4","to":"lanc_opcoes","label":"NÃO","kind":"return"},{"from":"lanc_5","to":"lanc_opcoes","label":"NÃO","kind":"return"},{"from":"lanc_opcoes","to":"lanc_1","label":"","kind":"return"},{"from":"ven_0","to":"ven_1","label":"","kind":"normal"},{"from":"ven_1","to":"ven_2","label":"","kind":"normal"},{"from":"ven_2","to":"ven_3","label":"","kind":"normal"},{"from":"ven_3","to":"ven_4","label":"SIM","kind":"normal"},{"from":"ven_4","to":"ven_5","label":"","kind":"normal"},{"from":"ven_5","to":"ven_6","label":"","kind":"normal"},{"from":"ven_6","to":"ven_7","label":"","kind":"normal"},{"from":"ven_7","to":"ven_8","label":"","kind":"normal"},{"from":"ven_8","to":"ven_9","label":"","kind":"normal"},{"from":"ven_9","to":"ven_10","label":"SIM","kind":"normal"},{"from":"ven_10","to":"ven_11","label":"","kind":"normal"},{"from":"ven_11","to":"ven_12","label":"","kind":"normal"},{"from":"ven_12","to":"ven_13","label":"","kind":"normal"},{"from":"ven_13","to":"ven_14","label":"","kind":"normal"},{"from":"ven_14","to":"ven_15","label":"","kind":"normal"},{"from":"b_vender","to":"ven_0","label":"","kind":"normal"},{"from":"ven_3","to":"ven_alinha","label":"NÃO","kind":"return"},{"from":"ven_alinha","to":"ven_2","label":"","kind":"return"},{"from":"ven_9","to":"ven_8","label":"NÃO","kind":"return"},{"from":"loc_0","to":"loc_1","label":"","kind":"normal"},{"from":"loc_1","to":"loc_2","label":"","kind":"normal"},{"from":"loc_2","to":"loc_3","label":"","kind":"normal"},{"from":"loc_3","to":"loc_4","label":"SIM","kind":"normal"},{"from":"loc_4","to":"loc_5","label":"","kind":"normal"},{"from":"loc_5","to":"loc_6","label":"","kind":"normal"},{"from":"loc_6","to":"loc_7","label":"","kind":"normal"},{"from":"loc_7","to":"loc_8","label":"","kind":"normal"},{"from":"loc_8","to":"loc_9","label":"","kind":"normal"},{"from":"loc_9","to":"loc_10","label":"SIM","kind":"normal"},{"from":"loc_10","to":"loc_11","label":"","kind":"normal"},{"from":"loc_11","to":"loc_12","label":"","kind":"normal"},{"from":"loc_12","to":"loc_13","label":"","kind":"normal"},{"from":"loc_13","to":"loc_14","label":"","kind":"normal"},{"from":"loc_14","to":"loc_15","label":"","kind":"normal"},{"from":"b_locar","to":"loc_0","label":"","kind":"normal"},{"from":"loc_3","to":"loc_alinha","label":"NÃO","kind":"return"},{"from":"loc_alinha","to":"loc_2","label":"","kind":"return"},{"from":"loc_9","to":"loc_8","label":"NÃO","kind":"return"},{"from":"resolver","to":"crm","label":"","kind":"normal"},{"from":"crm","to":"sat","label":"","kind":"normal"},{"from":"fin_0","to":"fin_1","label":"","kind":"normal"},{"from":"fin_1","to":"fin_2","label":"","kind":"normal"},{"from":"b_fin","to":"fin_0","label":"","kind":"normal"},{"from":"fin_2","to":"resolver","label":"","kind":"normal"},{"from":"man_0","to":"man_1","label":"","kind":"normal"},{"from":"man_1","to":"man_2","label":"","kind":"normal"},{"from":"man_2","to":"man_3","label":"","kind":"normal"},{"from":"b_man","to":"man_0","label":"","kind":"normal"},{"from":"man_3","to":"resolver","label":"","kind":"normal"},{"from":"ren_0","to":"ren_1","label":"","kind":"normal"},{"from":"ren_1","to":"ren_2","label":"","kind":"normal"},{"from":"ren_2","to":"ren_3","label":"","kind":"normal"},{"from":"ren_3","to":"ren_4","label":"","kind":"normal"},{"from":"b_ren","to":"ren_0","label":"","kind":"normal"},{"from":"ren_4","to":"resolver","label":"","kind":"normal"},{"from":"res_0","to":"res_1","label":"","kind":"normal"},{"from":"res_1","to":"res_2","label":"","kind":"normal"},{"from":"res_2","to":"res_3","label":"","kind":"normal"},{"from":"res_3","to":"res_4","label":"","kind":"normal"},{"from":"b_res","to":"res_0","label":"","kind":"normal"},{"from":"res_4","to":"resolver","label":"","kind":"normal"},{"from":"rec_0","to":"rec_1","label":"","kind":"normal"},{"from":"rec_1","to":"rec_2","label":"","kind":"normal"},{"from":"rec_2","to":"rec_3","label":"","kind":"normal"},{"from":"rec_3","to":"rec_4","label":"","kind":"normal"},{"from":"b_rec","to":"rec_0","label":"","kind":"normal"},{"from":"rec_4","to":"resolver","label":"","kind":"normal"}],"root":"start"}</script>
+<script>
+(()=>{
+const F=JSON.parse(document.getElementById('flow-data').textContent);
+
+// Keep the exact relative arrangement from the PDF, but add a safe outer margin
+// and expand the canvas when the original coordinates exceed its declared size.
+const minX=Math.min(...F.nodes.map(n=>n.x));
+const minY=Math.min(...F.nodes.map(n=>n.y));
+const shiftX=Math.max(0,30-minX);
+const shiftY=Math.max(0,30-minY);
+F.nodes.forEach(n=>{n.x+=shiftX;n.y+=shiftY});
+
+// Preserve complete words. Boxes that need more lines grow vertically while
+// keeping the same center, so the overall structure remains aligned.
+const hasOutgoing=new Set(F.edges.map(e=>e.from));
+function displayTokens(text){
+ return text.replaceAll('/','/ ').split(/\s+/).filter(Boolean);
+}
+function tokenWidth(token,fontSize=10){
+ let width=0;
+ for(const ch of token){
+   width+=/[A-ZÁÀÂÃÉÊÍÓÔÕÚÇMW]/.test(ch)?6.2:/[ilI1.,:;!?]/.test(ch)?2.8:5.15;
+ }
+ return width*(fontSize/10);
+}
+function estimatedLines(text,available,fontSize=10){
+ const tokens=displayTokens(text);let lines=1,current=0;
+ for(const token of tokens){
+   const w=tokenWidth(token,fontSize),space=current?3.2:0;
+   if(current&&current+space+w>available){lines++;current=w}else current+=space+w;
+ }
+ return lines;
+}
+for(const n of F.nodes){
+ const expandable=hasOutgoing.has(n.id)&&n.kind!=='terminal';
+ let available=n.w-(expandable?31:16);
+ if(n.kind==='decision')available=n.w*.56;
+ if(n.kind==='source')available-=4;
+ const font=n.kind==='decision'?9.4:10;
+ const lines=estimatedLines(n.label,Math.max(34,available),font);
+ const lineHeight=font*1.16;
+ const needed=Math.ceil(lines*lineHeight+(n.kind==='decision'?18:14));
+ const maxNeeded=n.kind==='decision'?Math.max(n.h,needed):Math.max(n.h,needed);
+ if(maxNeeded>n.h){const delta=maxNeeded-n.h;n.y-=delta/2;n.h=maxNeeded;}
+}
+// Open extra room between boxes where a "SIM" label must sit directly over the
+// original connection line. This keeps the line straight and brings the label
+// down to the line instead of routing the line upward to the label.
+function centerYOf(n){return n.y+n.h/2}
+function shiftRowAfter(anchorId,delta){
+ const anchor=F.nodes.find(n=>n.id===anchorId); if(!anchor)return;
+ const rowY=centerYOf(anchor);
+ for(const n of F.nodes){
+   if(n.id===anchorId) continue;
+   if(Math.abs(centerYOf(n)-rowY)<=24 && n.x>anchor.x) n.x+=delta;
+ }
+}
+[
+ ['alu_4',24],['alu_8',24],['alu_10',24],
+ ['comp_4',24],['comp_7',24],['comp_9',24],
+ ['perfil_prime',18],['prime_6',24],['prime_8',24],
+ ['lanc_4',20],['lanc_5',20],
+ ['ven_3',24],['ven_9',24],
+ ['loc_3',24],['loc_9',24]
+].forEach(([id,delta])=>shiftRowAfter(id,delta));
+F.width=Math.max(F.width+shiftX,...F.nodes.map(n=>n.x+n.w+90));
+F.height=Math.max(F.height+shiftY,...F.nodes.map(n=>n.y+n.h+70));
+
+const phases={
+ entry:{fill:'#adf0c7',border:'#087429'},
+ descobrimento:{fill:'#ffd8f4',border:'#af3fb9'},
+ reconhecimento:{fill:'#dedaff',border:'#6631d7'},
+ consideracao:{fill:'#c6dcff',border:'#305bab'},
+ decisao:{fill:'#f8d3af',border:'#9b4a07'},
+ posvenda:{fill:'#ffc6c6',border:'#bd0909'},
+ apoio:{fill:'#e7e7e7',border:'#908e8e'}
+};
+const nodeMap=new Map(F.nodes.map(n=>[n.id,n]));
+const nodeIndex=new Map(F.nodes.map((n,i)=>[n.id,i]));
+const out=new Map(F.nodes.map(n=>[n.id,[]]));
+F.edges.forEach((e,i)=>{e.i=i;(out.get(e.from)||[]).push(e)});
+
+const visible=new Set([F.root]);
+const expanded=new Set();
+let scale=.82;
+const viewport=document.getElementById('viewport');
+const stage=document.getElementById('stage');
+const canvas=document.getElementById('canvas');
+const edgeSvg=document.getElementById('edges');
+const nodeLayer=document.getElementById('nodes');
+const tip=document.getElementById('tip');
+canvas.style.width=F.width+'px';
+canvas.style.height=F.height+'px';
+edgeSvg.setAttribute('width',F.width);
+edgeSvg.setAttribute('height',F.height);
+edgeSvg.setAttribute('viewBox',`0 0 ${F.width} ${F.height}`);
+
+function el(tag,attrs={}){
+ const e=document.createElementNS('http://www.w3.org/2000/svg',tag);
+ for(const[k,v]of Object.entries(attrs))e.setAttribute(k,v);
+ return e;
+}
+function box(n){return{x:n.x,y:n.y,w:n.w,h:n.h,cx:n.x+n.w/2,cy:n.y+n.h/2}}
+function anchor(n,side){
+ const b=box(n);
+ return side==='left'?{x:b.x,y:b.cy}:
+        side==='right'?{x:b.x+b.w,y:b.cy}:
+        side==='top'?{x:b.cx,y:b.y}:{x:b.cx,y:b.y+b.h};
+}
+function rectsOverlap(a,b){return a.x<b.x+b.w&&a.x+a.w>b.x&&a.y<b.y+b.h&&a.y+a.h>b.y}
+
+// Deterministic orthogonal router.
+// The original diagram has three kinds of connections:
+// 1) straight horizontal progressions;
+// 2) shared distribution/collection trunks;
+// 3) feedback loops outside the main row.
+// Drawing those patterns explicitly keeps every line outside the boxes and
+// gives each feedback loop its own corridor, so lines do not cross or overlap.
+function simplify(points){
+ const clean=[];
+ for(const p of points){
+   const last=clean[clean.length-1];
+   if(last&&last.x===p.x&&last.y===p.y)continue;
+   if(clean.length>=2){
+     const a=clean[clean.length-2],b=clean[clean.length-1];
+     if((a.x===b.x&&b.x===p.x)||(a.y===b.y&&b.y===p.y)){
+       clean[clean.length-1]=p;continue;
+     }
+   }
+   clean.push(p);
+ }
+ return clean;
+}
+function pathD(points){return simplify(points).map((p,i)=>(i?'L':'M')+` ${p.x} ${p.y}`).join(' ')}
+function centerY(n){return n.y+n.h/2}
+function centerX(n){return n.x+n.w/2}
+function edgeKey(e){return `${e.from}->${e.to}`}
+function activeEdge(e){return expanded.has(e.from)&&visible.has(e.to)}
+
+const fanoutGroups={
+ start:new Set(F.edges.filter(e=>e.from==='start'&&e.kind==='normal').map(e=>e.to)),
+ cliente:new Set(F.edges.filter(e=>e.from==='cliente'&&e.kind==='normal').map(e=>e.to)),
+ necessidade:new Set(F.edges.filter(e=>e.from==='necessidade'&&e.kind==='normal').map(e=>e.to)),
+ perfil_prime:new Set(F.edges.filter(e=>e.from==='perfil_prime'&&e.kind==='normal').map(e=>e.to))
+};
+const collectorGroups={
+ contato:new Set(F.edges.filter(e=>e.to==='contato'&&e.kind==='normal').map(e=>e.from)),
+ triagem:new Set(F.edges.filter(e=>e.to==='triagem'&&e.kind==='normal').map(e=>e.from)),
+ resolver:new Set(F.edges.filter(e=>e.to==='resolver'&&e.kind==='normal').map(e=>e.from))
+};
+const groupedEdges=new Set();
+for(const [source,targets] of Object.entries(fanoutGroups)){
+ F.edges.forEach(e=>{if(e.from===source&&targets.has(e.to)&&e.kind==='normal')groupedEdges.add(e.i)});
+}
+for(const [target,sources] of Object.entries(collectorGroups)){
+ F.edges.forEach(e=>{if(e.to===target&&sources.has(e.from)&&e.kind==='normal')groupedEdges.add(e.i)});
+}
+function fanoutTrunkX(id){
+ const n=nodeMap.get(id),r=n.x+n.w;
+ if(id==='cliente')return r+23;
+ if(id==='necessidade')return r+30;
+ if(id==='perfil_prime')return r+35;
+ const targets=[...fanoutGroups[id]].map(t=>nodeMap.get(t));
+ return (r+Math.min(...targets.map(t=>t.x)))/2;
+}
+function collectorTrunkX(id){
+ const target=nodeMap.get(id);
+ if(id==='contato')return target.x-35;
+ if(id==='triagem')return target.x-20;
+ if(id==='resolver')return target.x-45;
+ return target.x-30;
+}
+function directRoute(e){
+ const a=nodeMap.get(e.from),b=nodeMap.get(e.to);
+ const s=anchor(a,'right'),t=anchor(b,'left');
+ if(Math.abs(s.y-t.y)<1)return [s,t];
+ const x=(s.x+t.x)/2;
+ return [s,{x,y:s.y},{x,y:t.y},t];
+}
+function simRoute(e){
+ const a=nodeMap.get(e.from),b=nodeMap.get(e.to);
+ const s=anchor(a,'right'),t=anchor(b,'left');
+ const x1=s.x+18, x2=t.x-18;
+ // Create a dedicated corridor above or below the row so the "SIM" label can
+ // sit right on its own connection instead of being pushed far away.
+ const canGoAbove=a.y>24;
+ const lane=(canGoAbove?Math.min(a.y,b.y)-16:Math.max(a.y+a.h,b.y+b.h)+16);
+ if(Math.abs(s.y-t.y)<1){
+   return simplify([s,{x:x1,y:s.y},{x:x1,y:lane},{x:x2,y:lane},{x:x2,y:t.y},t]);
+ }
+ // For slightly misaligned forward edges, keep the corridor but meet the target cleanly.
+ return simplify([s,{x:x1,y:s.y},{x:x1,y:lane},{x:x2,y:lane},{x:x2,y:t.y},t]);
+}
+function gapLanes(upper,lower){
+ const top=upper.y+upper.h,bottom=lower.y,gap=Math.max(12,bottom-top);
+ return [top+gap*.32,top+gap*.72];
+}
+function feedbackPair(decisionId,supportId,targetId,supportAbove){
+ const decision=nodeMap.get(decisionId),support=nodeMap.get(supportId),target=nodeMap.get(targetId);
+ const upper=supportAbove?support:decision;
+ const lower=supportAbove?decision:support;
+ const [laneDecision,laneBack]=gapLanes(upper,lower);
+ const supportRight=anchor(support,'right');
+ const side=supportAbove?'top':'bottom';
+ const source=anchor(decision,side);
+ const first=[source,{x:source.x,y:laneDecision},{x:supportRight.x+12,y:laneDecision},{x:supportRight.x+12,y:supportRight.y},supportRight];
+ const supportPort=anchor(support,supportAbove?'bottom':'top');
+ const targetPort=anchor(target,supportAbove?'top':'bottom');
+ const second=[supportPort,{x:supportPort.x,y:laneBack},{x:targetPort.x,y:laneBack},targetPort];
+ return{first:simplify(first),second:simplify(second)};
+}
+const feedbackRoutes=new Map();
+function setFeedback(from,to,points){feedbackRoutes.set(`${from}->${to}`,simplify(points))}
+
+// Feedback pair: rent search.
+{
+ const r=feedbackPair('alu_4','alu_ajuste','alu_2',true);
+ setFeedback('alu_4','alu_ajuste',r.first);setFeedback('alu_ajuste','alu_2',r.second);
+}
+// Feedback pair: third-party purchase search.
+{
+ const r=feedbackPair('comp_4','comp_ajuste','comp_2',false);
+ setFeedback('comp_4','comp_ajuste',r.first);setFeedback('comp_ajuste','comp_2',r.second);
+}
+// Feedback pair: property sale expectations.
+{
+ const r=feedbackPair('ven_3','ven_alinha','ven_2',true);
+ setFeedback('ven_3','ven_alinha',r.first);setFeedback('ven_alinha','ven_2',r.second);
+}
+// Feedback pair: rental conditions.
+{
+ const r=feedbackPair('loc_3','loc_alinha','loc_2',true);
+ setFeedback('loc_3','loc_alinha',r.first);setFeedback('loc_alinha','loc_2',r.second);
+}
+function sameRowLoop(from,to,side,offset){
+ const a=nodeMap.get(from),b=nodeMap.get(to);
+ const s=anchor(a,side),t=anchor(b,side);
+ const lane=side==='top'?Math.min(a.y,b.y)-offset:Math.max(a.y+a.h,b.y+b.h)+offset;
+ return simplify([s,{x:s.x,y:lane},{x:t.x,y:lane},t]);
+}
+setFeedback('alu_8','alu_6',sameRowLoop('alu_8','alu_6','bottom',24));
+setFeedback('alu_10','alu_9',sameRowLoop('alu_10','alu_9','bottom',42));
+setFeedback('comp_7','comp_6',sameRowLoop('comp_7','comp_6','top',24));
+setFeedback('comp_9','comp_8',sameRowLoop('comp_9','comp_8','top',42));
+setFeedback('prime_6','prime_5',sameRowLoop('prime_6','prime_5','bottom',24));
+setFeedback('prime_8','prime_7',sameRowLoop('prime_8','prime_7','bottom',42));
+setFeedback('ven_9','ven_8',sameRowLoop('ven_9','ven_8','bottom',24));
+setFeedback('loc_9','loc_8',sameRowLoop('loc_9','loc_8','bottom',24));
+
+// Launch flow has two decisions feeding the same support box. Each connection
+// uses a different side/corridor, and the return leaves from the left side.
+{
+ const a=nodeMap.get('lanc_4'),b=nodeMap.get('lanc_5'),o=nodeMap.get('lanc_opcoes'),t=nodeMap.get('lanc_1');
+ const aStart=anchor(a,'bottom'),bStart=anchor(b,'bottom');
+ const laneA=aStart.y+7,laneB=bStart.y+13;
+ const topA={x:o.x+28,y:o.y};
+ setFeedback('lanc_4','lanc_opcoes',[aStart,{x:aStart.x,y:laneA},{x:topA.x,y:laneA},topA]);
+ const right=anchor(o,'right');
+ setFeedback('lanc_5','lanc_opcoes',[bStart,{x:bStart.x,y:laneB},{x:right.x+12,y:laneB},{x:right.x+12,y:right.y},right]);
+ const left=anchor(o,'left'),target=anchor(t,'bottom'),x=left.x-28,lane=o.y-15;
+ setFeedback('lanc_opcoes','lanc_1',[left,{x,y:left.y},{x,y:lane},{x:target.x,y:lane},target]);
+}
+function routeEdge(e){
+ if(e.kind==='return')return feedbackRoutes.get(edgeKey(e))||directRoute(e);
+ if(e.label==='SIM')return directRoute(e);
+ return directRoute(e);
+}
+const occupiedLabelRects=[];
+function segmentHitsRect(a,b,r,pad=1){
+ const rr={x:r.x-pad,y:r.y-pad,w:r.w+pad*2,h:r.h+pad*2};
+ if(a.x===b.x){
+   const y1=Math.min(a.y,b.y),y2=Math.max(a.y,b.y);
+   return a.x>=rr.x&&a.x<=rr.x+rr.w&&y2>=rr.y&&y1<=rr.y+rr.h;
+ }
+ if(a.y===b.y){
+   const x1=Math.min(a.x,b.x),x2=Math.max(a.x,b.x);
+   return a.y>=rr.y&&a.y<=rr.y+rr.h&&x2>=rr.x&&x1<=rr.x+rr.w;
+ }
+ return false;
+}
+function rectHitsAnyPath(r,paths){
+ for(const pts of paths){
+   for(let i=0;i<pts.length-1;i++)if(segmentHitsRect(pts[i],pts[i+1],r,2))return true;
+ }
+ return false;
+}
+function safeLabelRect(r,allPaths,ignoredPaths=[]){
+ if(r.x<3||r.y<3||r.x+r.w>F.width-3||r.y+r.h>F.height-3)return false;
+ if(F.nodes.some(n=>rectsOverlap(r,{x:n.x-7,y:n.y-7,w:n.w+14,h:n.h+14})))return false;
+ if(occupiedLabelRects.some(o=>rectsOverlap(r,{x:o.x-4,y:o.y-3,w:o.w+8,h:o.h+6})))return false;
+ const filtered=ignoredPaths.length?allPaths.filter(p=>!ignoredPaths.includes(p)):allPaths;
+ if(rectHitsAnyPath(r,filtered))return false;
+ return true;
+}
+function nearLineCandidates(points,text,edge){
+ const w=Math.max(25,text.length*6+10),h=16,candidates=[];
+ const isNo=text==='NÃO', isSim=text==='SIM';
+ const ratios=isNo?[.18,.3,.42,.56,.7]:(isSim?[.28,.4,.52,.64]:[.28,.42,.58,.72]);
+ for(let i=0;i<points.length-1;i++){
+   const a=points[i],b=points[i+1],horizontal=a.y===b.y;
+   const len=Math.abs(a.x-b.x)+Math.abs(a.y-b.y);
+   if(len<14)continue;
+   const isFirst=i===0, isLast=i===points.length-2;
+   let priority=len + (isFirst?55:0) + (isLast?8:0);
+   if(edge&&edge.kind==='return'){ if(isFirst) priority+=40; }
+   if(edge&&edge.kind!=='return'&&isFirst) priority+=25;
+   if(horizontal) priority+=18; else priority+=10;
+   if(isSim){
+     if(horizontal) priority+=150; // a SIM should sit above its horizontal line
+     if(isFirst) priority+=20;
+   }
+   for(const ratio of ratios){
+     const mx=a.x+(b.x-a.x)*ratio,my=a.y+(b.y-a.y)*ratio;
+     if(horizontal){
+       const offs=isNo?[-12,12,-20,20,-28,28]:(isSim?[-5,-7,-9,5,7]:[-12,12,-20,20]);
+       for(const off of offs)candidates.push({x:mx,y:my+off,len,priority:priority-(Math.abs(ratio-.5)*6),seg:i});
+     }else{
+       const horizDir=(i>0?Math.sign(points[i].x-points[i-1].x):0)||(i<points.length-2?Math.sign(points[i+2].x-b.x):0)||1;
+       const sideOrder=isNo?[12,-12,20,-20,28,-28]:(isSim?[6,-6,9,-9]:[12,-12,20,-20]);
+       for(const base of sideOrder){
+         const off=(horizDir<0?-1:1)*Math.abs(base)*(base<0?-1:1);
+         candidates.push({x:mx+off,y:my,len,priority:priority-3-(Math.abs(ratio-.38)*8),seg:i});
+       }
+       if(isFirst && edge && edge.kind==='return'){
+         const ex=a.x+(b.x-a.x)*.08;
+         const near=isSim?8:14;
+         candidates.push({x:ex+near,y:my, len:len+5, priority:priority+12, seg:i});
+         candidates.push({x:ex-near,y:my, len:len+5, priority:priority+11, seg:i});
+       }
+     }
+   }
+ }
+ candidates.sort((u,v)=>(v.priority-u.priority)||(v.len-u.len));
+ return {candidates,w,h};
+}
+function labelPosition(points,text,allPaths=[],edge=null){
+ const {candidates,w,h}=nearLineCandidates(points,text,edge);
+ const ignoreOwnPath=text==='SIM' ? [points] : [];
+ for(const p of candidates){
+   const r={x:p.x-w/2,y:p.y-h/2,w,h};
+   if(safeLabelRect(r,allPaths,ignoreOwnPath)){occupiedLabelRects.push(r);return{x:p.x,y:p.y};}
+ }
+ // Dedicated fallback for SIM: stay anchored to the first segment instead of
+ // drifting away from the source connection.
+ if(text==='SIM' && points.length>=2){
+   const horizSeg=points.findIndex((p,i)=>i<points.length-1 && points[i].y===points[i+1].y && Math.abs(points[i+1].x-points[i].x)>=24);
+   const idx=horizSeg>=0?horizSeg:0;
+   const a=points[idx], b=points[idx+1], horizontal=a.y===b.y;
+   const scanRatios=horizontal?[.32,.5,.68,.22,.78]:[.2,.35,.5,.65];
+   const scanOffsets=horizontal?[-5,-7,-9,5,7]:[0,6,-6,10,-10];
+   for(const ratio of scanRatios){
+     const mx=a.x+(b.x-a.x)*ratio, my=a.y+(b.y-a.y)*ratio;
+     for(const off of scanOffsets){
+       const px=horizontal?mx:mx+off;
+       const py=horizontal?my+off:my;
+       const r={x:px-w/2,y:py-h/2,w,h};
+       if(safeLabelRect(r,allPaths,ignoreOwnPath)){occupiedLabelRects.push(r);return{x:px,y:py};}
+     }
+   }
+ }
+ // Generic fallback: still search nearby, but remain around this line bundle instead of
+ // drifting to unrelated areas.
+ const bounds={
+   minX:Math.min(...points.map(p=>p.x)),maxX:Math.max(...points.map(p=>p.x)),
+   minY:Math.min(...points.map(p=>p.y)),maxY:Math.max(...points.map(p=>p.y))
+ };
+ const cx=(bounds.minX+bounds.maxX)/2,cy=(bounds.minY+bounds.maxY)/2;
+ for(let radius=14;radius<=56;radius+=6){
+   const probes=[
+     {x:cx,y:bounds.minY-radius},{x:cx,y:bounds.maxY+radius},
+     {x:bounds.minX-radius,y:cy},{x:bounds.maxX+radius,y:cy},
+     {x:bounds.minX-radius,y:bounds.minY-radius},{x:bounds.maxX+radius,y:bounds.minY-radius},
+     {x:bounds.minX-radius,y:bounds.maxY+radius},{x:bounds.maxX+radius,y:bounds.maxY+radius}
+   ];
+   for(const p of probes){
+     const r={x:p.x-w/2,y:p.y-h/2,w,h};
+     if(safeLabelRect(r,allPaths,ignoreOwnPath)){occupiedLabelRects.push(r);return{x:p.x,y:p.y};}
+   }
+ }
+ return null;
+}
+function labelSvg(text,points,allPaths,edge){
+ const p=labelPosition(points,text,allPaths,edge);if(!p)return;
+ const w=Math.max(25,text.length*6+10);
+ edgeSvg.append(el('rect',{x:p.x-w/2,y:p.y-8,width:w,height:16,rx:3,class:'edge-label-bg'}));
+ const t=el('text',{x:p.x,y:p.y+.5,class:'edge-label'});t.textContent=text;edgeSvg.append(t);
+}
+function appendPath(points,classes='',arrow=true){
+ const attrs={d:pathD(points),class:'edge '+classes};
+ if(!arrow)attrs['marker-end']='none';
+ edgeSvg.append(el('path',attrs));
+}
+function drawFanout(sourceId,active,allPaths,pendingLabels){
+ const targets=fanoutGroups[sourceId];
+ const edges=active.filter(e=>e.from===sourceId&&targets.has(e.to));
+ if(!edges.length)return;
+ const source=nodeMap.get(sourceId),s=anchor(source,'right'),x=fanoutTrunkX(sourceId);
+ const targetPorts=edges.map(e=>({e,p:anchor(nodeMap.get(e.to),'left')}));
+ const ys=[s.y,...targetPorts.map(v=>v.p.y)];
+ const sourceLink=[s,{x,y:s.y}];
+ const vertical=[{x,y:Math.min(...ys)},{x,y:Math.max(...ys)}];
+ appendPath(sourceLink,'shared',false);appendPath(vertical,'shared',false);
+ allPaths.push(sourceLink,vertical);
+ for(const {e,p} of targetPorts){
+   const branch=[{x,y:p.y},p];appendPath(branch,'',true);allPaths.push(branch);
+   if(e.label)pendingLabels.push({text:e.label,points:branch,edge:e});
+ }
+}
+function drawCollector(targetId,active,allPaths,pendingLabels){
+ const sources=collectorGroups[targetId];
+ const edges=active.filter(e=>e.to===targetId&&sources.has(e.from));
+ if(!edges.length)return;
+ const target=nodeMap.get(targetId),t=anchor(target,'left'),x=collectorTrunkX(targetId);
+ const sourcePorts=edges.map(e=>({e,p:anchor(nodeMap.get(e.from),'right')}));
+ const ys=[t.y,...sourcePorts.map(v=>v.p.y)];
+ for(const {e,p} of sourcePorts){
+   const branch=[p,{x,y:p.y}];appendPath(branch,'shared',false);allPaths.push(branch);
+   if(e.label)pendingLabels.push({text:e.label,points:branch,edge:e});
+ }
+ const vertical=[{x,y:Math.min(...ys)},{x,y:Math.max(...ys)}];
+ const targetLink=[{x,y:t.y},t];
+ appendPath(vertical,'shared',false);appendPath(targetLink,'',true);
+ allPaths.push(vertical,targetLink);
+}
+function drawEdges(){
+ occupiedLabelRects.length=0;
+ edgeSvg.replaceChildren();
+ const defs=el('defs');
+ const marker=el('marker',{id:'arrow',markerWidth:'7',markerHeight:'7',refX:'6.2',refY:'3.5',orient:'auto',markerUnits:'strokeWidth'});
+ marker.append(el('path',{d:'M0,0 L7,3.5 L0,7 z',fill:'#222428'}));defs.append(marker);edgeSvg.append(defs);
+ const active=F.edges.filter(activeEdge),allPaths=[],pendingLabels=[];
+ for(const source of Object.keys(fanoutGroups))drawFanout(source,active,allPaths,pendingLabels);
+ for(const target of Object.keys(collectorGroups))drawCollector(target,active,allPaths,pendingLabels);
+ for(const e of active){
+   if(groupedEdges.has(e.i))continue;
+   const points=routeEdge(e);appendPath(points,e.kind==='return'?'return':'',true);allPaths.push(points);
+   if(e.label)pendingLabels.push({text:e.label,points,edge:e});
+ }
+ // Labels are placed only after every connection exists, so they cannot be
+ // hidden by a later line or positioned beneath a box.
+ for(const item of pendingLabels)labelSvg(item.text,item.points,allPaths,item.edge);
+}
+function displayLabel(text){return text.replaceAll('/','/\u200b')}
+function fitLabel(button,label,n){
+ const hasNext=(out.get(n.id)||[]).length>0;
+ let availW=n.w-(hasNext&&!button.classList.contains('terminal')?31:16);
+ let availH=n.h-12;
+ if(n.kind==='decision'){availW=n.w*.56;availH=n.h*.68}
+ if(n.kind==='source')availW-=4;
+ label.style.width=Math.max(28,availW)+'px';
+ label.style.maxHeight=Math.max(18,availH)+'px';
+ let size=n.kind==='decision'?9.4:10;
+ label.style.fontSize=size+'px';
+ label.style.lineHeight='1.16';
+ // Only a small font adjustment is allowed; words are never cut or hyphenated.
+ while(size>9&&(label.scrollHeight>availH+.5||label.scrollWidth>availW+.5)){
+   size-=.1;label.style.fontSize=size+'px';
+ }
+ if(label.scrollHeight>availH+.5||label.scrollWidth>availW+.5){
+   label.style.letterSpacing='-.08px';
+ }
+}
+function drawNodes(){
+ nodeLayer.replaceChildren();
+ F.nodes.forEach(n=>{
+   if(!visible.has(n.id))return;
+   const p=phases[n.phase]||phases.consideracao;
+   const b=document.createElement('button');
+   b.type='button';b.className='node '+n.kind+(expanded.has(n.id)?' expanded':'');
+   b.style.left=n.x+'px';b.style.top=n.y+'px';b.style.width=n.w+'px';b.style.height=n.h+'px';
+   b.style.setProperty('--fill',p.fill);b.style.setProperty('--border',p.border);b.title=n.label;
+   const label=document.createElement('span');label.className='label';label.textContent=displayLabel(n.label);b.append(label);
+   const next=out.get(n.id)||[];
+   if(next.length){const mark=document.createElement('span');mark.className='mark';mark.textContent=expanded.has(n.id)?'−':'▶';b.append(mark)}
+   b.onclick=()=>toggleNode(n.id);nodeLayer.append(b);fitLabel(b,label,n);
+ });
+}
+function recomputeVisible(){
+ visible.clear();visible.add(F.root);
+ const queue=[F.root],processed=new Set();
+ while(queue.length){
+   const id=queue.shift();if(processed.has(id))continue;processed.add(id);
+   if(!expanded.has(id))continue;
+   (out.get(id)||[]).forEach(e=>{visible.add(e.to);queue.push(e.to)});
+ }
+}
+function toggleNode(id){
+ const next=out.get(id)||[];
+ if(!next.length){tip.textContent='Esta é uma etapa final.';return}
+ if(expanded.has(id)){
+   expanded.delete(id);recomputeVisible();render();
+   tip.textContent='Ramificação recolhida. Clique novamente para reabrir.';return;
+ }
+ const before=new Set(visible);expanded.add(id);recomputeVisible();
+ const added=[...visible].filter(nodeId=>!before.has(nodeId));render();
+ tip.textContent=added.length?`${added.length} próxima(s) etapa(s) aberta(s)`:'Conexão desta etapa exibida';
+ if(added.length)requestAnimationFrame(()=>focusNodes(added));
+}
+function focusNodes(ids){
+ let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
+ ids.forEach(id=>{const n=nodeMap.get(id);if(!n)return;minX=Math.min(minX,n.x);minY=Math.min(minY,n.y);maxX=Math.max(maxX,n.x+n.w);maxY=Math.max(maxY,n.y+n.h)});
+ if(!isFinite(minX))return;
+ const left=minX*scale,top=minY*scale,right=maxX*scale,bottom=maxY*scale;
+ const vx=viewport.scrollLeft,vy=viewport.scrollTop,vw=viewport.clientWidth,vh=viewport.clientHeight;
+ if(left<vx+20||right>vx+vw-20)viewport.scrollLeft=Math.max(0,left-vw*.45);
+ if(top<vy+20||bottom>vy+vh-20)viewport.scrollTop=Math.max(0,top-vh*.4);
+}
+function applyScale(){
+ canvas.style.transform=`scale(${scale})`;stage.style.width=(F.width*scale)+'px';stage.style.height=(F.height*scale)+'px';
+ document.getElementById('one').textContent=Math.round(scale*100)+'%';
+}
+function render(){drawEdges();drawNodes();applyScale()}
+function reset(){
+ expanded.clear();recomputeVisible();scale=.82;render();
+ viewport.scrollTo(0,Math.max(0,(625+shiftY)*scale-viewport.clientHeight/2));
+ tip.textContent='Clique em uma caixa para abrir; clique novamente para recolher';
+}
+function openAll(){
+ F.nodes.forEach(n=>{if((out.get(n.id)||[]).length)expanded.add(n.id)});recomputeVisible();render();
+ tip.textContent='Fluxograma completo aberto. Clique em qualquer caixa com − para recolher sua ramificação';
+}
+function fit(){
+ scale=Math.min(.95,(viewport.clientWidth-24)/F.width,(viewport.clientHeight-24)/F.height);render();viewport.scrollTo(0,0);tip.textContent='Visão geral do fluxograma';
+}
+document.getElementById('reset').onclick=reset;
+document.getElementById('all').onclick=openAll;
+document.getElementById('fit').onclick=fit;
+document.getElementById('plus').onclick=()=>{scale=Math.min(1.35,scale+.1);applyScale()};
+document.getElementById('minus').onclick=()=>{scale=Math.max(.35,scale-.1);applyScale()};
+document.getElementById('one').onclick=()=>{scale=1;applyScale()};
+window.addEventListener('resize',applyScale);
+reset();
+})();
+</script>
+</body></html>
